@@ -1,4 +1,4 @@
-package com.example.pastebin.controller;
+package com.codesignal.pastebin.controller;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;

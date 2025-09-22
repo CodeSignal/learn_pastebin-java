@@ -1,10 +1,10 @@
-package com.example.pastebin.controller;
+package com.codesignal.pastebin.controller;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.example.pastebin.model.Role;
-import com.example.pastebin.model.User;
-import com.example.pastebin.repo.UserRepository;
-import com.example.pastebin.util.JwtUtil;
+import com.codesignal.pastebin.model.Role;
+import com.codesignal.pastebin.model.User;
+import com.codesignal.pastebin.repo.UserRepository;
+import com.codesignal.pastebin.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

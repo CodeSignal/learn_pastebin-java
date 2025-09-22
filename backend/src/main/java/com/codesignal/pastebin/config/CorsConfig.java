@@ -1,4 +1,4 @@
-package com.example.pastebin.config;
+package com.codesignal.pastebin.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

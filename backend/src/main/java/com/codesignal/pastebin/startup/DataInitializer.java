@@ -1,8 +1,8 @@
-package com.example.pastebin.startup;
+package com.codesignal.pastebin.startup;
 
-import com.example.pastebin.model.Role;
-import com.example.pastebin.model.User;
-import com.example.pastebin.repo.UserRepository;
+import com.codesignal.pastebin.model.Role;
+import com.codesignal.pastebin.model.User;
+import com.codesignal.pastebin.repo.UserRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

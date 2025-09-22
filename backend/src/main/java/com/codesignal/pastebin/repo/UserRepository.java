@@ -1,6 +1,6 @@
-package com.example.pastebin.repo;
+package com.codesignal.pastebin.repo;
 
-import com.example.pastebin.model.User;
+import com.codesignal.pastebin.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

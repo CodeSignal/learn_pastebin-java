@@ -1,4 +1,4 @@
-package com.example.pastebin.util;
+package com.codesignal.pastebin.util;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;

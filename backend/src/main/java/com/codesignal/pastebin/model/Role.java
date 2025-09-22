@@ -1,4 +1,4 @@
-package com.example.pastebin.model;
+package com.codesignal.pastebin.model;
 
 public enum Role {
     USER("user"),
