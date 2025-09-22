@@ -14,8 +14,15 @@ import java.io.File;
 @RestController
 public class FrontendController {
     private File resolveIndexHtml() {
+        // When running from repo root
         File local = new File("frontend/dist/index.html");
         if (local.exists()) return local;
+
+        // When running from backend directory
+        File sibling = new File("../frontend/dist/index.html");
+        if (sibling.exists()) return sibling;
+
+        // When running in Docker image
         File container = new File("/app/frontend/dist/index.html");
         if (container.exists()) return container;
         return null;
@@ -23,8 +30,16 @@ public class FrontendController {
     private File resolveStatic(String relPath) {
         if (relPath == null || relPath.isBlank()) return null;
         if (relPath.startsWith("/")) relPath = relPath.substring(1);
+
+        // When running from repo root
         File local = new File("frontend/dist/" + relPath);
         if (local.exists() && local.isFile()) return local;
+
+        // When running from backend directory
+        File sibling = new File("../frontend/dist/" + relPath);
+        if (sibling.exists() && sibling.isFile()) return sibling;
+
+        // When running in Docker image
         File container = new File("/app/frontend/dist/" + relPath);
         if (container.exists() && container.isFile()) return container;
         return null;
