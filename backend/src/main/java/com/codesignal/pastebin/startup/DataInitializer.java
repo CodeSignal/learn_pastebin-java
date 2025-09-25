@@ -5,16 +5,17 @@ import com.codesignal.pastebin.model.User;
 import com.codesignal.pastebin.repo.UserRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataInitializer implements ApplicationRunner {
     private final UserRepository users;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder encoder;
 
-    public DataInitializer(UserRepository users) {
+    public DataInitializer(UserRepository users, PasswordEncoder encoder) {
         this.users = users;
+        this.encoder = encoder;
     }
 
     @Override
@@ -28,4 +29,3 @@ public class DataInitializer implements ApplicationRunner {
         });
     }
 }
-

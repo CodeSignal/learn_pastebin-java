@@ -11,7 +11,7 @@ RUN npm run build
 ############################
 # Java build stage
 ############################
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-23 AS build
 WORKDIR /app
 COPY backend/pom.xml backend/pom.xml
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests -f backend/pom.xml dependency:go-offline
@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests -f backend/pom.xml pa
 ############################
 # Runtime image
 ############################
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:23-jre
 WORKDIR /app
 # Copy the Spring Boot fat jar (exclude the .original)
 COPY --from=build /app/backend/target/*-SNAPSHOT.jar /app/app.jar

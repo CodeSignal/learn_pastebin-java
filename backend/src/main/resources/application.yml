@@ -1,0 +1,24 @@
+server:
+  port: 3000
+
+spring:
+  datasource:
+    url: jdbc:sqlite:database.sqlite
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  threads:
+    virtual:
+      enabled: true
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+
+app:
+  jwt:
+    secret: jwt-secret-key

@@ -4,18 +4,25 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.codesignal.pastebin.model.Role;
 import com.codesignal.pastebin.model.User;
 import com.codesignal.pastebin.repo.UserRepository;
+import com.codesignal.pastebin.util.ErrorResponse;
 import com.codesignal.pastebin.util.JwtUtil;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -30,15 +37,13 @@ public class AdminController {
         this.dataSource = dataSource;
     }
 
-    private ResponseEntity<Map<String, Object>> error(HttpStatus status, String detail) {
-        Map<String, Object> err = new HashMap<>();
-        err.put("detail", detail);
-        return ResponseEntity.status(status).body(err);
+    private ResponseEntity<ErrorResponse> error(HttpStatus status, String detail) {
+        return ResponseEntity.status(status).body(new ErrorResponse(detail));
     }
 
-    private Object[] verifyAdminOrError(String authorizationHeader) {
+    private AdminOutcome verifyAdminOrError(String authorizationHeader) {
         if (authorizationHeader == null || authorizationHeader.isBlank()) {
-            return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "Missing authorization header")};
+            return new AdminOutcome(null, error(HttpStatus.UNAUTHORIZED, "Missing authorization header"));
         }
         String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
         try {
@@ -46,22 +51,22 @@ public class AdminController {
             Integer userId = decoded.getClaim("userId").asInt();
             var userOpt = users.findById(userId);
             if (userOpt.isEmpty()) {
-                return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "User not found")};
+                return new AdminOutcome(null, error(HttpStatus.UNAUTHORIZED, "User not found"));
             }
             User u = userOpt.get();
             if (u.getRole() != Role.ADMIN) {
-                return new Object[]{null, error(HttpStatus.FORBIDDEN, "Access denied")};
+                return new AdminOutcome(null, error(HttpStatus.FORBIDDEN, "Access denied"));
             }
-            return new Object[]{u, null};
+            return new AdminOutcome(u, null);
         } catch (Exception e) {
-            return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "Invalid token")};
+            return new AdminOutcome(null, error(HttpStatus.UNAUTHORIZED, "Invalid token"));
         }
     }
 
     @GetMapping("/test")
     public ResponseEntity<?> adminTest(@RequestHeader(value = "authorization", required = false) String authorization) {
-        Object[] res = verifyAdminOrError(authorization);
-        if (res[1] != null) return (ResponseEntity<?>) res[1];
+        var outcome = verifyAdminOrError(authorization);
+        if (outcome.error() != null) return outcome.error();
         return ResponseEntity.ok(Map.of("message", "Admin test endpoint accessed successfully"));
     }
 
@@ -76,7 +81,6 @@ public class AdminController {
             return error(HttpStatus.BAD_REQUEST, "Missing user ID parameter");
         }
 
-        // Deliberately vulnerable: Direct string concatenation into SQL
         String sql = "SELECT * FROM users WHERE id = " + id;
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement();
@@ -95,5 +99,8 @@ public class AdminController {
         } catch (Exception e) {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         }
+    }
+
+    private record AdminOutcome(User user, ResponseEntity<ErrorResponse> error) {
     }
 }

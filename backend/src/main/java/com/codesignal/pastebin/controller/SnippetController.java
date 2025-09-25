@@ -5,12 +5,21 @@ import com.codesignal.pastebin.model.Snippet;
 import com.codesignal.pastebin.model.User;
 import com.codesignal.pastebin.repo.SnippetRepository;
 import com.codesignal.pastebin.repo.UserRepository;
+import com.codesignal.pastebin.util.ErrorResponse;
 import com.codesignal.pastebin.util.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,78 +35,45 @@ public class SnippetController {
         this.jwt = jwt;
     }
 
-    private ResponseEntity<Map<String, Object>> error(HttpStatus status, String detail) {
-        Map<String, Object> err = new HashMap<>();
-        err.put("detail", detail);
-        return ResponseEntity.status(status).body(err);
-    }
-
-    private Object[] getCurrentUserOrError(String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isBlank()) {
-            return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "Missing authorization header")};
-        }
-        String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
-        try {
-            DecodedJWT decoded = jwt.verify(token);
-            Integer userId = decoded.getClaim("userId").asInt();
-            var userOpt = users.findById(userId);
-            if (userOpt.isEmpty()) {
-                return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "User not found")};
-            }
-            return new Object[]{userOpt.get(), null};
-        } catch (Exception e) {
-            return new Object[]{null, error(HttpStatus.UNAUTHORIZED, "Invalid token")};
-        }
-    }
-
     @PostMapping("")
     public ResponseEntity<?> create(@RequestHeader(value = "authorization", required = false) String authorization,
-                                    @RequestBody Map<String, Object> body) {
-        Object[] resUser = getCurrentUserOrError(authorization);
-        if (resUser[1] != null) return (ResponseEntity<?>) resUser[1];
-        User user = (User) resUser[0];
+                                    @RequestBody CreateSnippetRequest request) {
+        var outcome = getCurrentUser(authorization);
+        if (outcome.error() != null) return outcome.error();
+        User user = outcome.user();
+
         Snippet s = new Snippet();
         s.setId(UUID.randomUUID().toString());
-        s.setTitle((String) body.get("title"));
-        s.setContent((String) body.get("content"));
-        s.setLanguage((String) body.get("language"));
+        s.setTitle(request.title());
+        s.setContent(request.content());
+        s.setLanguage(request.language());
         s.setUserId(user.getId());
         s = snippets.save(s);
 
-        Map<String, Object> res = new LinkedHashMap<>();
-        res.put("id", s.getId());
-        res.put("title", s.getTitle());
-        res.put("content", s.getContent());
-        res.put("language", s.getLanguage());
-        res.put("userId", String.valueOf(s.getUserId()));
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(new SnippetResponse(s.getId(), s.getTitle(), s.getContent(), s.getLanguage(), String.valueOf(s.getUserId())));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getOne(@PathVariable("id") String id) {
         return snippets.findById(id)
-                .<ResponseEntity<?>>map(s -> {
-                    Map<String, Object> res = new LinkedHashMap<>();
-                    res.put("id", s.getId());
-                    res.put("title", s.getTitle());
-                    res.put("content", s.getContent());
-                    res.put("language", s.getLanguage());
-                    res.put("userId", String.valueOf(s.getUserId()));
-                    return ResponseEntity.ok(res);
-                })
+                .<ResponseEntity<?>>map(s -> ResponseEntity.ok(new SnippetResponse(
+                        s.getId(),
+                        s.getTitle(),
+                        s.getContent(),
+                        s.getLanguage(),
+                        String.valueOf(s.getUserId())
+                )))
                 .orElseGet(() -> error(HttpStatus.NOT_FOUND, "Snippet not found"));
     }
 
     @GetMapping("")
     public ResponseEntity<?> listForUser(@RequestHeader(value = "authorization", required = false) String authorization) {
-        Object[] resUser = getCurrentUserOrError(authorization);
-        if (resUser[1] != null) return (ResponseEntity<?>) resUser[1];
-        Integer uid = ((User) resUser[0]).getId();
-        var list = snippets.findByUserId(uid).stream().map(s -> Map.of(
-                "id", s.getId(),
-                "title", s.getTitle(),
-                "language", s.getLanguage()
-        )).collect(Collectors.toList());
+        var outcome = getCurrentUser(authorization);
+        if (outcome.error() != null) return outcome.error();
+        Integer uid = outcome.user().getId();
+        List<SnippetSummary> list = snippets.findByUserId(uid).stream()
+                .map(s -> new SnippetSummary(s.getId(), s.getTitle(), s.getLanguage()))
+                .collect(Collectors.toList());
         return ResponseEntity.ok(list);
     }
 
@@ -106,8 +82,43 @@ public class SnippetController {
         return snippets.findById(id)
                 .<ResponseEntity<?>>map(s -> {
                     snippets.delete(s);
-                    return ResponseEntity.ok(Map.of("message", "Snippet deleted successfully"));
+                    return ResponseEntity.ok(new DeleteResponse("Snippet deleted successfully"));
                 })
                 .orElseGet(() -> error(HttpStatus.NOT_FOUND, "Snippet not found"));
+    }
+
+    private AuthOutcome getCurrentUser(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            return new AuthOutcome(null, error(HttpStatus.UNAUTHORIZED, "Missing authorization header"));
+        }
+        String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
+        try {
+            DecodedJWT decoded = jwt.verify(token);
+            Integer userId = decoded.getClaim("userId").asInt();
+            return users.findById(userId)
+                    .map(user -> new AuthOutcome(user, null))
+                    .orElseGet(() -> new AuthOutcome(null, error(HttpStatus.UNAUTHORIZED, "User not found")));
+        } catch (Exception e) {
+            return new AuthOutcome(null, error(HttpStatus.UNAUTHORIZED, "Invalid token"));
+        }
+    }
+
+    private ResponseEntity<ErrorResponse> error(HttpStatus status, String detail) {
+        return ResponseEntity.status(status).body(new ErrorResponse(detail));
+    }
+
+    private record AuthOutcome(User user, ResponseEntity<ErrorResponse> error) {
+    }
+
+    public record CreateSnippetRequest(String title, String content, String language) {
+    }
+
+    public record SnippetResponse(String id, String title, String content, String language, String userId) {
+    }
+
+    public record SnippetSummary(String id, String title, String language) {
+    }
+
+    public record DeleteResponse(String message) {
     }
 }
