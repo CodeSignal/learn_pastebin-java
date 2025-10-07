@@ -21,4 +21,4 @@ spring:
 
 app:
   jwt:
-    secret: jwt-secret-key
+    secret: ${JWT_SECRET:change-me}
