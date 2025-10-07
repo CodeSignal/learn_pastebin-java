@@ -6,7 +6,7 @@
     <artifactId>pastebin</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>pastebin</name>
-    <description>Java translation of learn_pastebin-python backend</description>
+    <description>Pastebin app backend</description>
 
     <properties>
         <java.version>23</java.version>
